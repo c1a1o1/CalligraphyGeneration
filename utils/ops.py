@@ -16,7 +16,7 @@ def conv2d(x, output_filters, kh=5, kw=5, sh=2, sw=2, stddev=0.02, scope="conv2d
     with tf.variable_scope(scope):
         shape = x.shape
         W = tf.get_variable('W', [kh, kw, shape[-1], output_filters],
-                            initializer=tf.truncated_normal_initializer(stddev=stddev, seed=seed))
+                            initializer=tf.truncated_normal_initializer(stddev=stddev))
         Wconv = tf.nn.conv2d(x, W, strides=[1, sh, sw, 1], padding='SAME')
 
         biases = tf.get_variable('b', [output_filters], initializer=tf.constant_initializer(0.0))
@@ -30,7 +30,7 @@ def deconv2d(x, output_shape, kh=5, kw=5, sh=2, sw=2, stddev=0.02, scope="deconv
         # filter : [height, width, output_channels, in_channels]
         input_shape = x.get_shape().as_list()
         W = tf.get_variable('W', [kh, kw, output_shape[-1], input_shape[-1]],
-                            initializer=tf.random_normal_initializer(stddev=stddev, seed=seed))
+                            initializer=tf.random_normal_initializer(stddev=stddev))
 
         deconv = tf.nn.conv2d_transpose(x, W, output_shape=output_shape,
                                         strides=[1, sh, sw, 1])
@@ -55,7 +55,7 @@ def fc(x, output_size, stddev=0.02, scope="fc"):
     with tf.variable_scope(scope):
         shape = x.get_shape().as_list()
         W = tf.get_variable("W", [shape[1], output_size], tf.float32,
-                            tf.random_normal_initializer(stddev=stddev, seed=seed))
+                            tf.random_normal_initializer(stddev=stddev))
         b = tf.get_variable("b", [output_size],
                             initializer=tf.constant_initializer(0.0))
         return tf.matmul(x, W) + b

@@ -337,7 +337,7 @@ class Font2Font(object):
         if not self.sess:
             raise Exception("no session registered")
 
-        tf.set_random_seed(1234)
+        tf.set_random_seed(100)
 
         learning_rate = tf.placeholder(tf.float32, name="learning_rate")
         d_optimizer = tf.train.AdamOptimizer(learning_rate, beta1=0.5).minimize(loss_handle.d_loss, var_list=d_vars)
