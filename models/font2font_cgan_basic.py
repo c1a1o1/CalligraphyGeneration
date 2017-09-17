@@ -398,14 +398,14 @@ class Font2Font(object):
                                                             loss_handle.d_loss_fake,
                                                             summary_handle.d_merged],
                                                            feed_dict={real_data: batch_images,
-                                                                      lr_g: current_lr_g,
-                                                                      lr_d:current_lr_d})
+                                                                      learn_rate_g: current_lr_g,
+                                                                      learn_rate_d:current_lr_d})
                 # Optimize G
                 _, batch_g_loss = self.sess.run([g_optimizer, loss_handle.g_loss],
                                                 feed_dict={
                                                     real_data: batch_images,
-                                                    lr_g: current_lr_g,
-                                                lr_d: current_lr_d})
+                                                    learn_rate_g: current_lr_g,
+                                                learn_rate_d: current_lr_d})
                 # magic move to Optimize G again
                 # according to https://github.com/carpedm20/DCGAN-tensorflow
                 # collect all the losses along the way
@@ -413,8 +413,8 @@ class Font2Font(object):
                                                                          loss_handle.g_loss,
                                                                          summary_handle.g_merged],
                                                                         feed_dict={ real_data: batch_images,
-                                                                                    lr_g: current_lr_g,
-                                                                                    lr_d: current_lr_d
+                                                                                    learn_rate_g: current_lr_g,
+                                                                                    learn_rate_d: current_lr_d
                                                                         })
                 passed = time.time() - start_time
                 log_format = "Epoch: [%2d], [%4d/%4d] time: %4.4f, d_loss: %.5f, g_loss: %.5f, " + \
