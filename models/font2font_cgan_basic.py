@@ -343,13 +343,13 @@ class Font2Font(object):
 
         tf.set_random_seed(100)
 
-        lr_g = tf.placeholder(tf.float32, name="learning_rate_g")
-        lr_d = tf.placeholder(tf.float32, name="learning_rate_d")
+        learn_rate_g = tf.placeholder(tf.float32, name="learning_rate_g")
+        learn_rate_d = tf.placeholder(tf.float32, name="learning_rate_d")
 
         # d_optimizer = tf.train.AdamOptimizer(lr_d, beta1=beta_d).minimize(loss_handle.d_loss, var_list=d_vars)
         # g_optimizer = tf.train.AdamOptimizer(lr_g, beta1=beta_g).minimize(loss_handle.g_loss, var_list=g_vars)
-        d_optimizer = tf.train.GradientDescentOptimizer(lr_d).minimize(loss_handle.d_loss, var_list=d_vars)
-        g_optimizer = tf.train.GradientDescentOptimizer(lr_g).minimize(loss_handle.g_loss, var_list=g_vars)
+        d_optimizer = tf.train.GradientDescentOptimizer(learn_rate_d).minimize(loss_handle.d_loss, var_list=d_vars)
+        g_optimizer = tf.train.GradientDescentOptimizer(learn_rate_g).minimize(loss_handle.g_loss, var_list=g_vars)
 
         tf.global_variables_initializer().run()
 
