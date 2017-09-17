@@ -417,8 +417,8 @@ class Font2Font(object):
                                                                                     learn_rate_d: current_lr_d
                                                                         })
                 passed = time.time() - start_time
-                log_format = "Epoch: [%2d], [%4d/%4d] time: %4.4f, d_loss: %.5f, g_loss: %.5f, " + \
-                             "d_loss_real: %.5f, d_loss_fake: %.5f"
+                log_format = "Epoch: [%2d], [%4d/%4d] time: %4.4f, d_loss: %.8f, g_loss: %.8f, " + \
+                             "d_loss_real: %.8f, d_loss_fake: %.8f"
                 print(log_format % (ei, bid, total_batches, passed, batch_d_loss, batch_g_loss, batch_d_loss_real,
                                     batch_d_loss_fake))
                 summary_writer.add_summary(d_summary, counter)
