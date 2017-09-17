@@ -167,8 +167,10 @@ class Font2Font(object):
         d_loss_fake = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=fake_D,
                                                                              labels=tf.zeros_like(fake_D)))
         # g_loss
-        g_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=fake_D,
-                                                                            labels=tf.ones_like(fake_D)))
+        # g_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=fake_D,
+        #                                                                     labels=tf.ones_like(fake_D)))
+
+        g_loss = tf.reduce_mean(tf.abs(real_B - fake_B))
         # d_loss
         d_loss = d_loss_real + d_loss_fake
 
