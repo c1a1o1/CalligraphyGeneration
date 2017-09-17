@@ -158,8 +158,8 @@ class Font2Font(object):
 
         # Note it is not possible to set reuse flag back to False
         # initialize all variables before setting reuse to True
-        real_D_logits, real_D = self.discriminator(real_AB, is_training=is_training, reuse=False)
-        fake_D_logits, fake_D = self.discriminator(fake_AB, is_training=is_training, reuse=True)
+        real_D, real_D_logits= self.discriminator(real_AB, is_training=is_training, reuse=False)
+        fake_D, fake_D_logits = self.discriminator(fake_AB, is_training=is_training, reuse=True)
 
         # binary real/fake loss
         d_loss_real = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=real_D_logits,
