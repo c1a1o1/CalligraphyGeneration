@@ -333,8 +333,8 @@ class Font2Font(object):
             # last batch
             save_imgs(batch_buffer, count)
 
-    def train(self, lr=0.002, epoch=100, schedule=10, resume=True, freeze_encoder=False, sample_steps=10,
-              checkpoint_steps=10):
+    def train(self, lr_g=0.002, lr_d=0.00002, beta_g=0.9, beta_d=0.9, epoch=100, schedule=10, resume=True,
+              freeze_encoder=False, sample_steps=10, checkpoint_steps=10):
         g_vars, d_vars = self.retrieve_trainable_vars(freeze_encoder=freeze_encoder)
         input_handle, loss_handle, _, summary_handle = self.retrieve_handles()
 
@@ -343,9 +343,11 @@ class Font2Font(object):
 
         tf.set_random_seed(100)
 
-        learning_rate = tf.placeholder(tf.float32, name="learning_rate")
-        d_optimizer = tf.train.AdamOptimizer(learning_rate*0.01, beta1=0.5).minimize(loss_handle.d_loss, var_list=d_vars)
-        g_optimizer = tf.train.AdamOptimizer(learning_rate, beta1=0.5).minimize(loss_handle.g_loss, var_list=g_vars)
+        lr_g = tf.placeholder(tf.float32, name="learning_rate_g")
+        lr_d = tf.placeholder(tf.float32, name="learning_rate_d")
+
+        d_optimizer = tf.train.AdamOptimizer(lr_d, beta_d=0.5).minimize(loss_handle.d_loss, var_list=d_vars)
+        g_optimizer = tf.train.AdamOptimizer(lr_g, beta_g=0.5).minimize(loss_handle.g_loss, var_list=g_vars)
 
         tf.global_variables_initializer().run()
 
@@ -364,7 +366,8 @@ class Font2Font(object):
             _, model_dir = self.get_model_id_and_dir()
             self.restore_model(saver, model_dir)
 
-        current_lr = lr
+        current_lr_g = lr_g
+        current_lr_d = lr_d
         counter = 0
         start_time = time.time()
 
@@ -372,11 +375,15 @@ class Font2Font(object):
             train_batch_iter = data_provider.get_train_iter(self.batch_size)
 
             if (ei + 1) % schedule == 0:
-                update_lr = current_lr / 2.0
+                update_lr_g = current_lr_g / 2.0
+                update_lr_d = current_lr_d / 2.0
                 # minimum learning rate guarantee
-                update_lr = max(update_lr, 0.0002)
-                print("decay learning rate from %.5f to %.5f" % (current_lr, update_lr))
-                current_lr = update_lr
+                update_lr_g = max(update_lr_g, 0.0002)
+                update_lr_d = max(update_lr_d, 0.00000002)
+                print("decay learning rate g from %.5f to %.5f and d from %.5f to %.7f" % (current_lr_g, update_lr_g,
+                                                                                           current_lr_d, update_lr_d))
+                current_lr_g = update_lr_g
+                current_lr_d = update_lr_d
 
             for bid, batch in enumerate(train_batch_iter):
                 counter += 1
@@ -389,12 +396,14 @@ class Font2Font(object):
                                                             loss_handle.d_loss_fake,
                                                             summary_handle.d_merged],
                                                            feed_dict={real_data: batch_images,
-                                                                      learning_rate: current_lr})
+                                                                      lr_g: current_lr_g,
+                                                                      lr_d:current_lr_d})
                 # Optimize G
                 _, batch_g_loss = self.sess.run([g_optimizer, loss_handle.g_loss],
                                                 feed_dict={
                                                     real_data: batch_images,
-                                                    learning_rate: current_lr})
+                                                    lr_g: current_lr_g,
+                                                lr_d: current_lr_d})
                 # magic move to Optimize G again
                 # according to https://github.com/carpedm20/DCGAN-tensorflow
                 # collect all the losses along the way
@@ -402,7 +411,8 @@ class Font2Font(object):
                                                                          loss_handle.g_loss,
                                                                          summary_handle.g_merged],
                                                                         feed_dict={ real_data: batch_images,
-                                                                                    learning_rate: current_lr
+                                                                                    lr_g: current_lr_g,
+                                                                                    lr_d: current_lr_d
                                                                         })
                 passed = time.time() - start_time
                 log_format = "Epoch: [%2d], [%4d/%4d] time: %4.4f, d_loss: %.5f, g_loss: %.5f, " + \

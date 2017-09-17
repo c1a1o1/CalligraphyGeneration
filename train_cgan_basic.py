@@ -18,7 +18,11 @@ parser.add_argument('--image_size', dest='image_size', type=int, default=256,
                     help="size of your input and output image")
 parser.add_argument('--epoch', dest='epoch', type=int, default=100, help='number of epoch')
 parser.add_argument('--batch_size', dest='batch_size', type=int, default=25, help='number of examples in batch')
-parser.add_argument('--lr', dest='lr', type=float, default=0.001, help='initial learning rate for adam')
+parser.add_argument('--lr_g', dest='lr_g', type=float, default=0.001, help='initial learning rate for adam of G network')
+parser.add_argument('--lr_d', dest='lr_d', type=float, default=0.00001,
+                    help='initial learning rate for adam of D network')
+parser.add_argument('--beta_g', dest='beta_g', type=float, default=0.9, help='initial beta for adam of G network')
+parser.add_argument('--beta_d', dest='beta_d', type=float, default=0.9, help='initial beta for adam of G network')
 parser.add_argument('--schedule', dest='schedule', type=int, default=10, help='number of epochs to half learning rate')
 parser.add_argument('--resume', dest='resume', type=int, default=1, help='resume from previous training')
 parser.add_argument('--freeze_encoder', dest='freeze_encoder', type=int, default=0,
@@ -49,8 +53,8 @@ def main(_):
         model.register_session(sess)
         model.build_model(is_training=True)
 
-        model.train(lr=args.lr, epoch=args.epoch, resume=args.resume,
-                    schedule=args.schedule, freeze_encoder=args.freeze_encoder,
+        model.train(lr_g=args.lr_g, lr_d=args.lr_d, beta_g=args.beta_g, beta_d=args.beta_d, epoch=args.epoch,
+                    resume=args.resume, schedule=args.schedule, freeze_encoder=args.freeze_encoder,
                     sample_steps=args.sample_steps, checkpoint_steps=args.checkpoint_steps)
 
     end = datetime.now()
