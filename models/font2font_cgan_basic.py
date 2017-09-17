@@ -170,10 +170,6 @@ class Font2Font(object):
         g_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=fake_D_logits,
                                                                             labels=tf.ones_like(fake_D)))
 
-        l1_loss = tf.reduce_mean(tf.abs(real_B - fake_B))
-
-        # g_loss = tf.reduce_mean(tf.abs(real_B - fake_B))
-        # d_loss
         d_loss = d_loss_real + d_loss_fake
 
         d_loss_summary = tf.summary.scalar("d_loss", d_loss)
@@ -348,8 +344,6 @@ class Font2Font(object):
 
         d_optimizer = tf.train.AdamOptimizer(lr_d, beta1=beta_d).minimize(loss_handle.d_loss, var_list=d_vars)
         g_optimizer = tf.train.AdamOptimizer(lr_g, beta1=beta_g).minimize(loss_handle.g_loss, var_list=g_vars)
-        # d_optimizer = tf.train.GradientDescentOptimizer(learn_rate_d).minimize(loss_handle.d_loss, var_list=d_vars)
-        # g_optimizer = tf.train.GradientDescentOptimizer(learn_rate_g).minimize(loss_handle.g_loss, var_list=g_vars)
 
         tf.global_variables_initializer().run()
 
@@ -402,16 +396,12 @@ class Font2Font(object):
                                                                       learn_rate_d:current_lr_d})
                 # Optimize G
                 _, batch_g_loss = self.sess.run([g_optimizer, loss_handle.g_loss],
-                                                feed_dict={
-                                                    real_data: batch_images,
-                                                    learn_rate_g: current_lr_g,
+                                                feed_dict={ real_data: batch_images, learn_rate_g: current_lr_g,
                                                 learn_rate_d: current_lr_d})
                 # magic move to Optimize G again
                 # according to https://github.com/carpedm20/DCGAN-tensorflow
                 # collect all the losses along the way
-                _, batch_g_loss, g_summary = self.sess.run([g_optimizer,
-                                                                         loss_handle.g_loss,
-                                                                         summary_handle.g_merged],
+                _, batch_g_loss, g_summary = self.sess.run([g_optimizer, loss_handle.g_loss, summary_handle.g_merged],
                                                                         feed_dict={ real_data: batch_images,
                                                                                     learn_rate_g: current_lr_g,
                                                                                     learn_rate_d: current_lr_d
