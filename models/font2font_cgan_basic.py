@@ -342,7 +342,7 @@ class Font2Font(object):
         tf.set_random_seed(100)
 
         learning_rate = tf.placeholder(tf.float32, name="learning_rate")
-        d_optimizer = tf.train.AdamOptimizer(learning_rate, beta1=0.5).minimize(loss_handle.d_loss, var_list=d_vars)
+        d_optimizer = tf.train.AdamOptimizer(learning_rate*0.01, beta1=0.5).minimize(loss_handle.d_loss, var_list=d_vars)
         g_optimizer = tf.train.AdamOptimizer(learning_rate, beta1=0.5).minimize(loss_handle.g_loss, var_list=g_vars)
 
         tf.global_variables_initializer().run()
