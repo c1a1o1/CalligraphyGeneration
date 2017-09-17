@@ -158,16 +158,16 @@ class Font2Font(object):
 
         # Note it is not possible to set reuse flag back to False
         # initialize all variables before setting reuse to True
-        real_D, _ = self.discriminator(real_AB, is_training=is_training, reuse=False)
-        fake_D, _ = self.discriminator(fake_AB, is_training=is_training, reuse=True)
+        real_D_logits, real_D = self.discriminator(real_AB, is_training=is_training, reuse=False)
+        fake_D_logits, fake_D = self.discriminator(fake_AB, is_training=is_training, reuse=True)
 
         # binary real/fake loss
-        d_loss_real = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=real_D,
+        d_loss_real = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=real_D_logits,
                                                                              labels=tf.ones_like(real_D)))
-        d_loss_fake = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=fake_D,
+        d_loss_fake = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=fake_D_logits,
                                                                              labels=tf.zeros_like(fake_D)))
         # g_loss
-        g_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=fake_D,
+        g_loss = tf.reduce_mean(tf.nn.sigmoid_cross_entropy_with_logits(logits=fake_D_logits,
                                                                             labels=tf.ones_like(fake_D)))
 
         l1_loss = tf.reduce_mean(tf.abs(real_B - fake_B))
