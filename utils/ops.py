@@ -4,19 +4,17 @@ from __future__ import absolute_import
 import tensorflow as tf
 import numpy as np
 
-seed = 100
-
 
 def batch_norm(x, is_training, epsilon=1e-5, decay=0.9, scope="batch_norm"):
     return tf.contrib.layers.batch_norm(x, decay=decay, updates_collections=None, epsilon=epsilon,
                                         scale=True, is_training=is_training, scope=scope)
 
 
-def conv2d(x, output_filters, kh=5, kw=5, sh=2, sw=2, stddev=0.02, scope="conv2d"):
+def conv2d(x, output_filters, kh=5, kw=5, sh=2, sw=2, stddev=0.01, scope="conv2d"):
     with tf.variable_scope(scope):
         shape = x.shape
         W = tf.get_variable('W', [kh, kw, shape[-1], output_filters],
-                            initializer=tf.random_normal_initializer(stddev=stddev))
+                            initializer=tf.truncated_normal_initializer(stddev=stddev))
         Wconv = tf.nn.conv2d(x, W, strides=[1, sh, sw, 1], padding='SAME')
 
         biases = tf.get_variable('b', [output_filters], initializer=tf.constant_initializer(0.0))
@@ -25,12 +23,12 @@ def conv2d(x, output_filters, kh=5, kw=5, sh=2, sw=2, stddev=0.02, scope="conv2d
         return Wconv_plus_b
 
 
-def deconv2d(x, output_shape, kh=5, kw=5, sh=2, sw=2, stddev=0.02, scope="deconv2d"):
+def deconv2d(x, output_shape, kh=5, kw=5, sh=2, sw=2, stddev=0.01, scope="deconv2d"):
     with tf.variable_scope(scope):
         # filter : [height, width, output_channels, in_channels]
         input_shape = x.get_shape().as_list()
         W = tf.get_variable('W', [kh, kw, output_shape[-1], input_shape[-1]],
-                            initializer=tf.random_normal_initializer(stddev=stddev))
+                            initializer=tf.truncated_normal_initializer(stddev=stddev))
 
         deconv = tf.nn.conv2d_transpose(x, W, output_shape=output_shape,
                                         strides=[1, sh, sw, 1])
@@ -51,11 +49,11 @@ def lrelu(x, leak=0.2, name="lrelu"):
         return f1 * x + f2 * abs(x)
 
 
-def fc(x, output_size, stddev=0.02, scope="fc"):
+def fc(x, output_size, stddev=0.01, scope="fc"):
     with tf.variable_scope(scope):
         shape = x.get_shape().as_list()
         W = tf.get_variable("W", [shape[1], output_size], tf.float32,
-                            tf.random_normal_initializer(stddev=stddev))
+                            tf.truncated_normal_initializer(stddev=stddev))
         b = tf.get_variable("b", [output_size],
                             initializer=tf.constant_initializer(0.0))
         return tf.matmul(x, W) + b

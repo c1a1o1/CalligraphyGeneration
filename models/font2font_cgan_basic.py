@@ -4,6 +4,7 @@ from __future__ import absolute_import
 
 import tensorflow as tf
 import numpy as np
+import math
 import scipy.misc as misc
 import os
 import time
@@ -277,23 +278,6 @@ class Font2Font(object):
         sample_img_path = os.path.join(model_sample_dir, "sample_%02d_%04d.png" % (epoch, step))
         misc.imsave(sample_img_path, merged_pair)
 
-    def validate_train_model(self, images, epoch, step):
-        fake_imgs, real_imgs, d_loss, g_loss = self.generate_fake_samples(images)
-        print("Training set: d_loss: %.5f, g_loss: %.5f" % (d_loss, g_loss))
-
-        merged_fake_images = merge(scale_back(fake_imgs), [self.batch_size, 1])
-        merged_real_images = merge(scale_back(real_imgs), [self.batch_size, 1])
-        merged_pair = np.concatenate([merged_real_images, merged_fake_images], axis=1)
-
-        model_id, _ = self.get_model_id_and_dir()
-
-        model_sample_dir = os.path.join(self.sample_dir, model_id)
-        if not os.path.exists(model_sample_dir):
-            os.makedirs(model_sample_dir)
-
-        sample_img_path = os.path.join(model_sample_dir, "training_sample_%02d_%04d.png" % (epoch, step))
-        misc.imsave(sample_img_path, merged_pair)
-
     def export_generator(self, save_dir, model_dir, model_name="gen_model"):
         saver = tf.train.Saver()
         self.restore_model(saver, model_dir)
@@ -301,35 +285,7 @@ class Font2Font(object):
         gen_saver = tf.train.Saver(var_list=self.retrieve_generator_vars())
         gen_saver.save(self.sess, os.path.join(save_dir, model_name), global_step=0)
 
-    def infer(self, source_obj, model_dir, save_dir):
-        source_provider = InjectDataProvider(source_obj)
-
-        source_iter = source_provider.get_iter(self.batch_size)
-
-        tf.global_variables_initializer().run()
-        saver = tf.train.Saver(var_list=self.retrieve_generator_vars())
-        self.restore_model(saver, model_dir)
-
-        def save_imgs(imgs, count):
-            p = os.path.join(save_dir, "inferred_%04d.png" % count)
-            save_concat_images(imgs, img_path=p)
-            print("generated images saved at %s" % p)
-
-        count = 0
-        batch_buffer = list()
-        for source_imgs in source_iter:
-            fake_imgs = self.generate_fake_samples(source_imgs)[0]
-            merged_fake_images = merge(scale_back(fake_imgs), [self.batch_size, 1])
-            batch_buffer.append(merged_fake_images)
-            if len(batch_buffer) == 10:
-                save_imgs(batch_buffer, count)
-                batch_buffer = list()
-            count += 1
-        if batch_buffer:
-            # last batch
-            save_imgs(batch_buffer, count)
-
-    def train(self, lr_g=0.002, lr_d=0.00002, beta_g=0.9, beta_d=0.9, epoch=100, schedule=10, resume=True,
+    def train(self, lr_g=0.001, lr_d=0.0001, beta_g=0.9, beta_d=0.9, epoch=100, schedule=10, resume=True,
               freeze_encoder=False, sample_steps=10, checkpoint_steps=10):
         g_vars, d_vars = self.retrieve_trainable_vars(freeze_encoder=freeze_encoder)
         input_handle, loss_handle, _, summary_handle = self.retrieve_handles()
@@ -339,11 +295,21 @@ class Font2Font(object):
 
         tf.set_random_seed(100)
 
-        learn_rate_g = tf.placeholder(tf.float32, name="learning_rate_g")
-        learn_rate_d = tf.placeholder(tf.float32, name="learning_rate_d")
+        global_steps = tf.Variable(0, trainable=False)
 
-        d_optimizer = tf.train.AdamOptimizer(lr_d, beta1=beta_d).minimize(loss_handle.d_loss, var_list=d_vars)
-        g_optimizer = tf.train.AdamOptimizer(lr_g, beta1=beta_g).minimize(loss_handle.g_loss, var_list=g_vars)
+        learn_rate_g = tf.train.exponential_decay(lr_g,
+                                                     global_step=global_steps,
+                                                     decay_steps=schedule,
+                                                     decay_rate=0.9)
+        learn_rate_d = tf.train.exponential_decay(lr_d,
+                                                     global_step=global_steps,
+                                                     decay_steps=math.ceil(schedule * 0.6),
+                                                     decay_rate=0.5)
+
+        d_optimizer = tf.train.AdamOptimizer(learn_rate_d, beta1=beta_d).minimize(loss_handle.d_loss, var_list=d_vars)
+        g_optimizer = tf.train.AdamOptimizer(learn_rate_g, beta1=beta_g).minimize(loss_handle.g_loss, var_list=g_vars)
+
+        add_global_step = global_steps.assign_add(1)
 
         tf.global_variables_initializer().run()
 
@@ -370,16 +336,19 @@ class Font2Font(object):
         for ei in range(epoch):
             train_batch_iter = data_provider.get_train_iter(self.batch_size)
 
-            if (ei + 1) % schedule == 0:
-                update_lr_g = current_lr_g / 2.0
-                update_lr_d = current_lr_d / 2.0
-                # minimum learning rate guarantee
-                update_lr_g = max(update_lr_g, 0.0002)
-                update_lr_d = max(update_lr_d, 0.00000002)
-                print("decay learning rate g from %.5f to %.5f and d from %.5f to %.7f" % (current_lr_g, update_lr_g,
-                                                                                           current_lr_d, update_lr_d))
+            # update learning rate
+            _, update_lr_d, update_lr_g = self.sess.run([add_global_step, learn_rate_d, learn_rate_g])
+
+            update_lr_g = max(update_lr_g, 0.0002)
+            update_lr_d = max(update_lr_d, 0.000001)
+
+            if update_lr_g != current_lr_g:
+                print("decay lr g from {0:.7f} to {1:.7f}".format(current_lr_g, update_lr_g))
                 current_lr_g = update_lr_g
-                current_lr_d = update_lr_d
+
+            if update_lr_d != current_lr_d:
+                print("decay lr d from {0:.7f} to {1:.7f}".format(current_lr_d, update_lr_d))
+                current_lr_d =  update_lr_d
 
             for bid, batch in enumerate(train_batch_iter):
                 counter += 1
